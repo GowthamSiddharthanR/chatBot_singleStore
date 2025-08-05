@@ -28,7 +28,7 @@
       padding: 10px;
       border-top: 1px solid #ddd;
     }
-    .chat-input input {
+    .chat-input input[type="text"] {
       flex: 1;
       border: none;
       padding: 10px;
@@ -64,6 +64,11 @@
       background: #e4e6eb;
       color: black;
     }
+    .message img {
+      max-width: 100%;
+      margin-top: 10px;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
@@ -73,12 +78,12 @@
   
   <div class="chat-input">
     <input type="file" id="pdf-upload" style="display:none" accept="application/pdf">
-<button class="me-2" onclick="document.getElementById('pdf-upload').click()" title="Upload PDF">
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="white" class="bi bi-file-earmark-arrow-up" viewBox="0 0 16 16" style="background:#28a745; border-radius:50%; padding:5px;">
-    <path d="M8 5a.5.5 0 0 1 .5.5V9.293l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.498.498 0 0 1-.708 0l-2-2a.5.5 0 1 1 .708-.708L7.5 9.293V5.5A.5.5 0 0 1 8 5z"/>
-    <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zM9.5 3V0H4a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4h-2.5a1 1 0 0 1-1-1z"/>
-  </svg>
-</button>
+    <button class="me-2" onclick="document.getElementById('pdf-upload').click()" title="Upload PDF">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="white" class="bi bi-file-earmark-arrow-up" viewBox="0 0 16 16" style="background:#28a745; border-radius:50%; padding:5px;">
+        <path d="M8 5a.5.5 0 0 1 .5.5V9.293l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.498.498 0 0 1-.708 0l-2-2a.5.5 0 1 1 .708-.708L7.5 9.293V5.5A.5.5 0 0 1 8 5z"/>
+        <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zM9.5 3V0H4a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4h-2.5a1 1 0 0 1-1-1z"/>
+      </svg>
+    </button>
 
     <input type="text" id="message-input" placeholder="Type your message...">
     <button onclick="sendMessage()">
@@ -92,18 +97,17 @@
 <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
 <script>
   const socket = io();
-
-  const userId = Math.floor(Math.random() * 10000); // For demo purposes
-  console.log("userIduserId",userId);
-  
+  const userId = Math.floor(Math.random() * 10000);
   socket.emit('join', { user_id: userId });
+
   socket.on('joined', (data) => {
     console.log(`User ${data.user_id} joined the chat`);
   });
+
   const chatBox = document.getElementById('chat-box');
 
-  socket.on('message', (data) => {
-    addMessage(data.message, data.sender === userId ? 'you' : 'other');
+  socket.on('receive_message', (data) => {
+    addMessage(data.message, data.sender, data.images || []);
   });
 
   function sendMessage() {
@@ -114,7 +118,8 @@
     addMessage(msg, 'you');
     input.value = '';
   }
- document.getElementById('pdf-upload').addEventListener('change', function () {
+
+  document.getElementById('pdf-upload').addEventListener('change', function () {
     const file = this.files[0];
     if (!file) return;
 
@@ -134,36 +139,37 @@
       addMessage(`❌ Failed to upload ${file.name}`, 'you');
     });
   });
-  
-  socket.on('receive_message', (data) => {
-    addMessage(data.message, data.sender);
-  });
 
- function addMessage(text, sender) {
-  const div = document.createElement('div');
-  div.classList.add('message', sender);
+  function addMessage(text, sender, images=[]) {
+    const div = document.createElement('div');
+    div.classList.add('message', sender);
 
-  const now = new Date();
-  const timestamp = now.toLocaleTimeString('en-IN', {
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
+    const now = new Date();
+    const timestamp = now.toLocaleTimeString('en-IN', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
 
-  div.innerHTML = `
-    <div class="bubble">
-      ${text}
-      <div style="font-size: 10px; text-align: right; margin-top: 4px; color: #666;">
-        ${timestamp}
+    let content = `
+      <div class="bubble">
+        ${text}
+        <div style="font-size: 10px; text-align: right; margin-top: 4px; color: #666;">
+          ${timestamp}
+        </div>
       </div>
-    </div>
-  `;
+    `;
 
-  chatBox.appendChild(div);
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
+    images.forEach(imgUrl => {
+      content += `<img src="${imgUrl}" alt="Image" />`;
+    });
 
+    div.innerHTML = content;
+
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
 </script>
 
 </body>
